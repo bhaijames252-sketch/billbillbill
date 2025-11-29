@@ -25,10 +25,20 @@ class BillingService:
         now = datetime.utcnow()
         return f"bill_{now.strftime('%Y_%m_%d')}_{user_id}_{uuid.uuid4().hex[:6]}"
 
-    def _parse_datetime(self, dt_str: str) -> datetime:
+    def _parse_datetime(self, dt_str) -> datetime:
         if isinstance(dt_str, datetime):
+            if dt_str.tzinfo is not None:
+                return dt_str.replace(tzinfo=None)
             return dt_str
-        return parser.parse(dt_str.replace("Z", "+00:00")).replace(tzinfo=None)
+        parsed = parser.parse(dt_str.replace("Z", "+00:00"))
+        return parsed.replace(tzinfo=None)
+
+    def _ensure_naive(self, dt: datetime) -> datetime:
+        if dt is None:
+            return datetime.utcnow()
+        if dt.tzinfo is not None:
+            return dt.replace(tzinfo=None)
+        return dt
 
     def _get_latest_price(self, currency: str) -> Optional[dict]:
         price = self.mysql_session.query(LatestPrice).filter(
@@ -49,6 +59,119 @@ class BillingService:
         delta = end - start
         return max(delta.total_seconds() / 3600, 0)
 
+    def _get_billable_segments(
+        self,
+        events: list,
+        last_billed: datetime,
+        period_end: datetime,
+        resource_type: str
+    ) -> list:
+        relevant_events = []
+        for event in events:
+            event_time = self._parse_datetime(event["time"])
+            if event_time > last_billed and event_time <= period_end:
+                relevant_events.append({
+                    "time": event_time,
+                    "type": event["type"],
+                    "meta": event.get("meta", {})
+                })
+
+        relevant_events.sort(key=lambda x: x["time"])
+        return relevant_events
+
+    def _calculate_compute_charge(
+        self,
+        compute: dict,
+        last_billed: datetime,
+        period_end: datetime,
+        pricing: dict
+    ) -> float:
+        events = compute.get("events", [])
+        segments = self._get_billable_segments(events, last_billed, period_end, "compute")
+
+        if not segments:
+            hours = self._calculate_hours(last_billed, period_end)
+            flavor = compute["current_flavor"]
+            rate = pricing["compute"].get(flavor, pricing["compute"].get("others", {}))
+            return hours * rate.get("per_hour", 0)
+
+        total_charge = 0.0
+        current_time = last_billed
+        current_flavor = None
+        current_state = "running"
+
+        for event in compute.get("events", []):
+            event_time = self._parse_datetime(event["time"])
+            if event_time <= last_billed:
+                if event["type"] == "create" or event["type"] == "resize":
+                    current_flavor = event.get("meta", {}).get("flavor", current_flavor)
+                if event["type"] in ["running", "stopped", "deleted"]:
+                    current_state = event["type"]
+
+        if current_flavor is None:
+            current_flavor = compute["current_flavor"]
+
+        for segment in segments:
+            if current_state == "running" and current_flavor:
+                hours = self._calculate_hours(current_time, segment["time"])
+                rate = pricing["compute"].get(current_flavor, pricing["compute"].get("others", {}))
+                total_charge += hours * rate.get("per_hour", 0)
+
+            current_time = segment["time"]
+            if segment["type"] == "resize":
+                current_flavor = segment["meta"].get("flavor", current_flavor)
+            elif segment["type"] in ["running", "stopped", "deleted"]:
+                current_state = segment["type"]
+
+        if current_state == "running" and current_flavor and current_time < period_end:
+            hours = self._calculate_hours(current_time, period_end)
+            rate = pricing["compute"].get(current_flavor, pricing["compute"].get("others", {}))
+            total_charge += hours * rate.get("per_hour", 0)
+
+        return total_charge
+
+    def _calculate_disk_charge(
+        self,
+        disk: dict,
+        last_billed: datetime,
+        period_end: datetime,
+        pricing: dict
+    ) -> float:
+        events = disk.get("events", [])
+        segments = self._get_billable_segments(events, last_billed, period_end, "disk")
+        per_gb_hour = pricing["disk"].get("per_gb_hour", 0)
+
+        if not segments:
+            hours = self._calculate_hours(last_billed, period_end)
+            return hours * disk["size_gb"] * per_gb_hour
+
+        total_charge = 0.0
+        current_time = last_billed
+        current_size = None
+
+        for event in disk.get("events", []):
+            event_time = self._parse_datetime(event["time"])
+            if event_time <= last_billed:
+                if event["type"] == "create" or event["type"] == "resize":
+                    current_size = event.get("meta", {}).get("size_gb", current_size)
+
+        if current_size is None:
+            current_size = disk["size_gb"]
+
+        for segment in segments:
+            hours = self._calculate_hours(current_time, segment["time"])
+            total_charge += hours * current_size * per_gb_hour
+
+            current_time = segment["time"]
+            if segment["type"] == "resize":
+                current_size = segment["meta"].get("size_gb", current_size)
+
+        if current_time < period_end:
+            hours = self._calculate_hours(current_time, period_end)
+            total_charge += hours * current_size * per_gb_hour
+
+        return total_charge
+
     def _compute_resource_charges(
         self,
         user_id: str,
@@ -64,11 +187,9 @@ class BillingService:
             if last_billed >= period_end:
                 continue
 
-            hours = self._calculate_hours(last_billed, period_end)
-            flavor = compute["current_flavor"]
-            rate = pricing["compute"].get(flavor, pricing["compute"].get("others", {}))
-            per_hour = rate.get("per_hour", 0)
-            amount = round(hours * per_hour, 4)
+            amount = round(self._calculate_compute_charge(
+                compute, last_billed, period_end, pricing
+            ), 4)
 
             if amount > 0:
                 charges.append({
@@ -86,10 +207,9 @@ class BillingService:
             if last_billed >= period_end:
                 continue
 
-            hours = self._calculate_hours(last_billed, period_end)
-            size_gb = disk["size_gb"]
-            per_gb_hour = pricing["disk"].get("per_gb_hour", 0)
-            amount = round(hours * size_gb * per_gb_hour, 4)
+            amount = round(self._calculate_disk_charge(
+                disk, last_billed, period_end, pricing
+            ), 4)
 
             if amount > 0:
                 charges.append({
@@ -141,8 +261,10 @@ class BillingService:
 
         if period_end is None:
             period_end = datetime.utcnow()
+        else:
+            period_end = self._ensure_naive(period_end)
 
-        period_start = wallet.last_deducted_at or datetime.utcnow()
+        period_start = self._ensure_naive(wallet.last_deducted_at) if wallet.last_deducted_at else datetime.utcnow()
 
         charges, total = self._compute_resource_charges(user_id, period_end, pricing)
 

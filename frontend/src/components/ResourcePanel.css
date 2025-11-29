@@ -1,0 +1,287 @@
+.resource-panel {
+  background: white;
+  border-radius: 8px;
+  padding: 20px;
+  margin-bottom: 20px;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.panel-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+  padding-bottom: 15px;
+  border-bottom: 2px solid #f0f0f0;
+}
+
+.panel-header h2 {
+  font-size: 20px;
+  font-weight: 600;
+  color: #333;
+}
+
+.btn-create {
+  background: #667eea;
+  color: white;
+  padding: 10px 20px;
+  font-weight: 500;
+}
+
+.create-form {
+  background: #f9f9f9;
+  padding: 20px;
+  border-radius: 8px;
+  margin-bottom: 20px;
+}
+
+.form-group {
+  margin-bottom: 15px;
+}
+
+.form-group label {
+  display: block;
+  font-weight: 500;
+  margin-bottom: 6px;
+  color: #333;
+  font-size: 14px;
+}
+
+.form-group input,
+.form-group select {
+  width: 100%;
+  max-width: 300px;
+}
+
+.btn-submit {
+  background: #4CAF50;
+  color: white;
+  padding: 10px 30px;
+  font-weight: 500;
+}
+
+.loading {
+  text-align: center;
+  color: #999;
+  padding: 40px;
+}
+
+.resource-list {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: 20px;
+}
+
+.resource-card {
+  background: #fafafa;
+  border: 1px solid #e0e0e0;
+  border-radius: 8px;
+  padding: 16px;
+  transition: all 0.2s;
+}
+
+.resource-card:hover {
+  box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+  transform: translateY(-2px);
+}
+
+.resource-card.running,
+.resource-card.active,
+.resource-card.attached,
+.resource-card.detached {
+  border-left: 4px solid #4CAF50;
+}
+
+.resource-card.stopped {
+  border-left: 4px solid #FF9800;
+}
+
+.resource-card.deleted,
+.resource-card.released {
+  border-left: 4px solid #f44336;
+  opacity: 0.6;
+}
+
+.resource-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 12px;
+}
+
+.resource-header h3 {
+  font-size: 14px;
+  font-weight: 600;
+  color: #333;
+  margin-bottom: 6px;
+}
+
+.status-badge {
+  display: inline-block;
+  font-size: 10px;
+  font-weight: 600;
+  text-transform: uppercase;
+  padding: 3px 8px;
+  border-radius: 10px;
+  background: #e0e0e0;
+  color: #666;
+}
+
+.status-badge.running,
+.status-badge.active,
+.status-badge.attached,
+.status-badge.detached {
+  background: #c8e6c9;
+  color: #2e7d32;
+}
+
+.status-badge.stopped {
+  background: #ffe0b2;
+  color: #e65100;
+}
+
+.status-badge.deleted,
+.status-badge.released {
+  background: #ffcdd2;
+  color: #c62828;
+}
+
+.resource-flavor,
+.resource-size,
+.resource-ip {
+  font-size: 13px;
+  font-weight: 600;
+  color: #667eea;
+  display: block;
+}
+
+.resource-meta {
+  text-align: right;
+}
+
+.resource-cost {
+  font-size: 11px;
+  font-weight: 600;
+  color: #4CAF50;
+  margin-top: 4px;
+}
+
+.resource-info {
+  margin-bottom: 12px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid #e0e0e0;
+}
+
+.info-item {
+  display: flex;
+  justify-content: space-between;
+  font-size: 12px;
+  margin-bottom: 4px;
+  color: #666;
+}
+
+.info-item .label {
+  font-weight: 500;
+  color: #999;
+}
+
+.resource-events {
+  margin-bottom: 12px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid #e0e0e0;
+}
+
+.resource-events h4 {
+  font-size: 12px;
+  font-weight: 600;
+  color: #333;
+  margin-bottom: 8px;
+}
+
+.events-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  max-height: 150px;
+  overflow-y: auto;
+}
+
+.event-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 8px;
+  background: #f9f9f9;
+  border-radius: 4px;
+  font-size: 11px;
+}
+
+.event-type {
+  font-weight: 600;
+  text-transform: capitalize;
+  color: #667eea;
+  min-width: 60px;
+}
+
+.event-meta {
+  flex: 1;
+  color: #666;
+  font-weight: 500;
+}
+
+.event-time {
+  color: #999;
+  font-size: 10px;
+}
+
+.resource-actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.btn-action {
+  flex: 1;
+  min-width: 70px;
+  padding: 8px 12px;
+  font-size: 12px;
+  font-weight: 500;
+}
+
+.btn-action.btn-success {
+  background: #4CAF50;
+  color: white;
+}
+
+.btn-action.btn-warning {
+  background: #FF9800;
+  color: white;
+}
+
+.btn-action.btn-danger {
+  background: #f44336;
+  color: white;
+}
+
+.btn-action.btn-info {
+  background: #2196F3;
+  color: white;
+}
+
+.no-resources {
+  text-align: center;
+  color: #999;
+  padding: 40px 20px;
+  font-size: 14px;
+}
+
+.price-hint {
+  font-size: 12px;
+  color: #4CAF50;
+  font-weight: 600;
+  margin-top: 8px;
+  padding: 8px;
+  background: #f1f8f4;
+  border-radius: 4px;
+  text-align: center;
+}

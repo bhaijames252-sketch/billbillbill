@@ -6,3 +6,6 @@ venv/
 __pypackages__/
 .github/
 *.pyc
+
+
+frontend/node_modules/

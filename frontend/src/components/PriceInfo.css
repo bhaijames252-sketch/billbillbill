@@ -1,0 +1,86 @@
+.price-info {
+  background: white;
+  border-radius: 8px;
+  padding: 20px;
+  margin-bottom: 20px;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.price-info.loading {
+  text-align: center;
+  color: #999;
+  padding: 20px;
+}
+
+.price-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+  padding-bottom: 15px;
+  border-bottom: 2px solid #f0f0f0;
+}
+
+.price-header h3 {
+  font-size: 18px;
+  font-weight: 600;
+  color: #333;
+  margin: 0;
+}
+
+.price-version {
+  font-size: 12px;
+  color: #667eea;
+  background: #f0f0ff;
+  padding: 4px 10px;
+  border-radius: 12px;
+  font-weight: 600;
+}
+
+.price-sections {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 20px;
+}
+
+.price-section {
+  background: #f9f9f9;
+  padding: 15px;
+  border-radius: 8px;
+}
+
+.price-section h4 {
+  font-size: 14px;
+  font-weight: 600;
+  color: #333;
+  margin: 0 0 12px 0;
+}
+
+.price-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.price-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px 10px;
+  background: white;
+  border-radius: 6px;
+  border: 1px solid #e0e0e0;
+}
+
+.flavor-name {
+  font-size: 13px;
+  font-weight: 500;
+  color: #555;
+  text-transform: capitalize;
+}
+
+.price-value {
+  font-size: 13px;
+  font-weight: 700;
+  color: #4CAF50;
+}

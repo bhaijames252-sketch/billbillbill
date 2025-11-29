@@ -1,0 +1,47 @@
+.app {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+.app-header {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  padding: 20px 30px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.app-header h1 {
+  font-size: 24px;
+  font-weight: 600;
+}
+
+.user-selector {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.user-selector label {
+  font-weight: 500;
+}
+
+.user-selector input {
+  background: white;
+  min-width: 200px;
+}
+
+.app-content {
+  display: flex;
+  flex: 1;
+  height: calc(100vh - 84px);
+}
+
+.main-content {
+  flex: 1;
+  padding: 20px;
+  overflow-y: auto;
+}
