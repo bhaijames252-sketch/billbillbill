@@ -53,8 +53,11 @@ class ResourceService:
             resource.pop("_id", None)
         return resource
 
-    def get_user_computes(self, user_id: str) -> List[dict]:
-        resources = list(self.compute_col.find({"user_id": user_id, "deleted_at": None}))
+    def get_user_computes(self, user_id: str, include_deleted: bool = False) -> List[dict]:
+        query = {"user_id": user_id}
+        if not include_deleted:
+            query["deleted_at"] = None
+        resources = list(self.compute_col.find(query))
         for r in resources:
             r.pop("_id", None)
         return resources
@@ -133,8 +136,11 @@ class ResourceService:
             resource.pop("_id", None)
         return resource
 
-    def get_user_disks(self, user_id: str) -> List[dict]:
-        resources = list(self.disk_col.find({"user_id": user_id, "deleted_at": None}))
+    def get_user_disks(self, user_id: str, include_deleted: bool = False) -> List[dict]:
+        query = {"user_id": user_id}
+        if not include_deleted:
+            query["deleted_at"] = None
+        resources = list(self.disk_col.find(query))
         for r in resources:
             r.pop("_id", None)
         return resources
@@ -219,8 +225,11 @@ class ResourceService:
             resource.pop("_id", None)
         return resource
 
-    def get_user_floating_ips(self, user_id: str) -> List[dict]:
-        resources = list(self.floating_ip_col.find({"user_id": user_id, "released_at": None}))
+    def get_user_floating_ips(self, user_id: str, include_released: bool = False) -> List[dict]:
+        query = {"user_id": user_id}
+        if not include_released:
+            query["released_at"] = None
+        resources = list(self.floating_ip_col.find(query))
         for r in resources:
             r.pop("_id", None)
         return resources

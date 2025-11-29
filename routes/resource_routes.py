@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status, Query
 
 from models.schemas import (
     ComputeCreateRequest,
@@ -72,9 +72,10 @@ def get_compute(
 )
 def get_user_computes(
     user_id: str,
+    include_deleted: bool = Query(False, description="Include deleted compute instances"),
     service: ResourceService = Depends(get_resource_service)
 ):
-    return service.get_user_computes(user_id)
+    return service.get_user_computes(user_id, include_deleted=include_deleted)
 
 
 @router.patch(
@@ -173,9 +174,10 @@ def get_disk(
 )
 def get_user_disks(
     user_id: str,
+    include_deleted: bool = Query(False, description="Include deleted disk volumes"),
     service: ResourceService = Depends(get_resource_service)
 ):
-    return service.get_user_disks(user_id)
+    return service.get_user_disks(user_id, include_deleted=include_deleted)
 
 
 @router.patch(
@@ -276,9 +278,10 @@ def get_floating_ip(
 )
 def get_user_floating_ips(
     user_id: str,
+    include_released: bool = Query(False, description="Include released floating IPs"),
     service: ResourceService = Depends(get_resource_service)
 ):
-    return service.get_user_floating_ips(user_id)
+    return service.get_user_floating_ips(user_id, include_released=include_released)
 
 
 @router.patch(

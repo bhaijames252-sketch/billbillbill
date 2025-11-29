@@ -1,4 +1,4 @@
-from typing import Dict, List, Optional, Any
+from typing import Dict, List, Optional, Any, Union
 from pydantic import BaseModel, Field
 from datetime import datetime
 from enum import Enum
@@ -70,7 +70,7 @@ class WalletSettings(BaseModel):
 
 class WalletCreateRequest(BaseModel):
     user_id: str
-    balance: float = 0.0
+    balance: Union[int, float, str] = 0
     currency: str = "USD"
     auto_recharge: bool = False
     allow_negative: bool = True
@@ -84,7 +84,7 @@ class WalletUpdateRequest(BaseModel):
 
 class WalletResponse(BaseModel):
     user_id: str
-    balance: float
+    balance: str
     currency: str
     wallet: WalletSettings
     mongo_archival_id: Optional[str] = None
@@ -99,12 +99,12 @@ class TransactionType(str, Enum):
 
 
 class CreditRequest(BaseModel):
-    amount: float
+    amount: Union[int, float, str]
     reason: str
 
 
 class DebitRequest(BaseModel):
-    amount: float
+    amount: Union[int, float, str]
     reason: str
     price_version: Optional[str] = None
 
@@ -112,8 +112,8 @@ class DebitRequest(BaseModel):
 class TransactionResponse(BaseModel):
     tx_id: str
     time: datetime
-    amount: float
-    balance_after: float
+    amount: str
+    balance_after: str
     type: str
     reason: str
     price_version: Optional[str] = None
@@ -210,7 +210,7 @@ class FloatingIPResponse(BaseModel):
 
 class ChargeItem(BaseModel):
     type: str
-    amount: float
+    amount: str
     resource_id: Optional[str] = None
 
 
@@ -221,7 +221,7 @@ class BillingCycleResponse(BaseModel):
     period_end: datetime
     status: str
     charges: List[ChargeItem]
-    total: float
+    total: str
     paid: bool
     price_version: str
     generated_at: datetime

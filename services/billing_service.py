@@ -1,4 +1,5 @@
 from datetime import datetime
+from decimal import Decimal, ROUND_DOWN
 from typing import Optional, List
 import uuid
 
@@ -55,9 +56,9 @@ class BillingService:
             "price_version": price.price_version
         }
 
-    def _calculate_hours(self, start: datetime, end: datetime) -> float:
+    def _calculate_hours(self, start: datetime, end: datetime) -> Decimal:
         delta = end - start
-        return max(delta.total_seconds() / 3600, 0)
+        return Decimal(str(delta.total_seconds())) / Decimal("3600")
 
     def _get_billable_segments(
         self,
@@ -85,18 +86,10 @@ class BillingService:
         last_billed: datetime,
         period_end: datetime,
         pricing: dict
-    ) -> float:
+    ) -> Decimal:
         events = compute.get("events", [])
         segments = self._get_billable_segments(events, last_billed, period_end, "compute")
 
-        if not segments:
-            hours = self._calculate_hours(last_billed, period_end)
-            flavor = compute["current_flavor"]
-            rate = pricing["compute"].get(flavor, pricing["compute"].get("others", {}))
-            return hours * rate.get("per_hour", 0)
-
-        total_charge = 0.0
-        current_time = last_billed
         current_flavor = None
         current_state = "running"
 
@@ -111,11 +104,22 @@ class BillingService:
         if current_flavor is None:
             current_flavor = compute["current_flavor"]
 
+        if not segments:
+            if current_state != "running":
+                return Decimal("0")
+            hours = self._calculate_hours(last_billed, period_end)
+            flavor = compute["current_flavor"]
+            rate = pricing["compute"].get(flavor, pricing["compute"].get("others", {}))
+            return hours * Decimal(str(rate.get("per_hour", 0)))
+
+        total_charge = Decimal("0")
+        current_time = last_billed
+
         for segment in segments:
             if current_state == "running" and current_flavor:
                 hours = self._calculate_hours(current_time, segment["time"])
                 rate = pricing["compute"].get(current_flavor, pricing["compute"].get("others", {}))
-                total_charge += hours * rate.get("per_hour", 0)
+                total_charge += hours * Decimal(str(rate.get("per_hour", 0)))
 
             current_time = segment["time"]
             if segment["type"] == "resize":
@@ -126,7 +130,7 @@ class BillingService:
         if current_state == "running" and current_flavor and current_time < period_end:
             hours = self._calculate_hours(current_time, period_end)
             rate = pricing["compute"].get(current_flavor, pricing["compute"].get("others", {}))
-            total_charge += hours * rate.get("per_hour", 0)
+            total_charge += hours * Decimal(str(rate.get("per_hour", 0)))
 
         return total_charge
 
@@ -136,16 +140,16 @@ class BillingService:
         last_billed: datetime,
         period_end: datetime,
         pricing: dict
-    ) -> float:
+    ) -> Decimal:
         events = disk.get("events", [])
         segments = self._get_billable_segments(events, last_billed, period_end, "disk")
-        per_gb_hour = pricing["disk"].get("per_gb_hour", 0)
+        per_gb_hour = Decimal(str(pricing["disk"].get("per_gb_hour", 0)))
 
         if not segments:
             hours = self._calculate_hours(last_billed, period_end)
-            return hours * disk["size_gb"] * per_gb_hour
+            return hours * Decimal(str(disk["size_gb"])) * per_gb_hour
 
-        total_charge = 0.0
+        total_charge = Decimal("0")
         current_time = last_billed
         current_size = None
 
@@ -160,7 +164,7 @@ class BillingService:
 
         for segment in segments:
             hours = self._calculate_hours(current_time, segment["time"])
-            total_charge += hours * current_size * per_gb_hour
+            total_charge += hours * Decimal(str(current_size)) * per_gb_hour
 
             current_time = segment["time"]
             if segment["type"] == "resize":
@@ -168,7 +172,7 @@ class BillingService:
 
         if current_time < period_end:
             hours = self._calculate_hours(current_time, period_end)
-            total_charge += hours * current_size * per_gb_hour
+            total_charge += hours * Decimal(str(current_size)) * per_gb_hour
 
         return total_charge
 
@@ -179,69 +183,90 @@ class BillingService:
         pricing: dict
     ) -> tuple:
         charges = []
-        total = 0.0
+        total = Decimal("0")
 
-        computes = self.resource_service.get_user_computes(user_id)
+        computes = self.resource_service.get_user_computes(user_id, include_deleted=True)
         for compute in computes:
             last_billed = self._parse_datetime(compute["last_billed_until"])
-            if last_billed >= period_end:
+            
+            billing_end = period_end
+            if compute.get("deleted_at"):
+                deleted_at = self._parse_datetime(compute["deleted_at"])
+                if deleted_at < period_end:
+                    billing_end = deleted_at
+            
+            if last_billed >= billing_end:
                 continue
 
-            amount = round(self._calculate_compute_charge(
-                compute, last_billed, period_end, pricing
-            ), 4)
+            amount = self._calculate_compute_charge(
+                compute, last_billed, billing_end, pricing
+            )
 
             if amount > 0:
                 charges.append({
                     "type": "compute",
                     "resource_id": compute["resource_id"],
-                    "amount": amount
+                    "amount": str(amount)
                 })
                 total += amount
 
-            self.resource_service.update_last_billed("compute", compute["resource_id"], period_end)
+            self.resource_service.update_last_billed("compute", compute["resource_id"], billing_end)
 
-        disks = self.resource_service.get_user_disks(user_id)
+        disks = self.resource_service.get_user_disks(user_id, include_deleted=True)
         for disk in disks:
             last_billed = self._parse_datetime(disk["last_billed_until"])
-            if last_billed >= period_end:
+            
+            billing_end = period_end
+            if disk.get("deleted_at"):
+                deleted_at = self._parse_datetime(disk["deleted_at"])
+                if deleted_at < period_end:
+                    billing_end = deleted_at
+            
+            if last_billed >= billing_end:
                 continue
 
-            amount = round(self._calculate_disk_charge(
-                disk, last_billed, period_end, pricing
-            ), 4)
+            amount = self._calculate_disk_charge(
+                disk, last_billed, billing_end, pricing
+            )
 
             if amount > 0:
                 charges.append({
                     "type": "disk",
                     "resource_id": disk["resource_id"],
-                    "amount": amount
+                    "amount": str(amount)
                 })
                 total += amount
 
-            self.resource_service.update_last_billed("disk", disk["resource_id"], period_end)
+            self.resource_service.update_last_billed("disk", disk["resource_id"], billing_end)
 
-        floating_ips = self.resource_service.get_user_floating_ips(user_id)
+        floating_ips = self.resource_service.get_user_floating_ips(user_id, include_released=True)
         for fip in floating_ips:
             last_billed = self._parse_datetime(fip["last_billed_until"])
-            if last_billed >= period_end:
+            
+            billing_end = period_end
+            if fip.get("released_at"):
+                released_at = self._parse_datetime(fip["released_at"])
+                if released_at < period_end:
+                    billing_end = released_at
+            
+            if last_billed >= billing_end:
                 continue
 
-            hours = self._calculate_hours(last_billed, period_end)
-            per_hour = pricing["floating_ip"].get("per_hour", 0)
-            amount = round(hours * per_hour, 4)
+            hours = self._calculate_hours(last_billed, billing_end)
+            per_hour = Decimal(str(pricing["floating_ip"].get("per_hour", 0)))
+            amount = hours * per_hour
 
             if amount > 0:
                 charges.append({
                     "type": "floating_ip",
                     "resource_id": fip["resource_id"],
-                    "amount": amount
+                    "amount": str(amount)
                 })
                 total += amount
 
-            self.resource_service.update_last_billed("floating_ip", fip["resource_id"], period_end)
+            self.resource_service.update_last_billed("floating_ip", fip["resource_id"], billing_end)
 
-        return charges, round(total, 4)
+        return charges, total
 
     def compute_bill(
         self,
@@ -268,7 +293,7 @@ class BillingService:
 
         charges, total = self._compute_resource_charges(user_id, period_end, pricing)
 
-        if total == 0:
+        if total == Decimal("0"):
             return {
                 "message": "No billable usage found",
                 "user_id": user_id,
@@ -286,7 +311,7 @@ class BillingService:
             "period_end": period_end.isoformat() + "Z",
             "status": "pending",
             "charges": charges,
-            "total": total,
+            "total": str(total),
             "paid": False,
             "price_version": pricing["price_version"],
             "generated_at": now.isoformat() + "Z"
