@@ -69,7 +69,7 @@ def get_wallet(
     "/{user_id}/balance",
     response_model=dict,
     summary="Get user balance",
-    description="Retrieves only the balance for a user"
+    description="Retrieves balance for a user. Creates wallet automatically if it doesn't exist."
 )
 def get_balance(
     user_id: str,
@@ -77,9 +77,12 @@ def get_balance(
 ):
     result = service.get_wallet(user_id)
     if not result:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Wallet not found"
+        result = service.create_wallet(
+            user_id=user_id,
+            balance=0,
+            currency="USD",
+            auto_recharge=False,
+            allow_negative=True
         )
     return {
         "user_id": user_id,
