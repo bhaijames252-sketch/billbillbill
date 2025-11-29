@@ -23,14 +23,16 @@ export const walletAPI = {
 }
 
 export const resourceAPI = {
-  getComputes: (userId) => api.get(`/resources/computes/user/${userId}`),
+  getComputes: (userId, includeDeleted = true) => 
+    api.get(`/resources/computes/user/${userId}?include_deleted=${includeDeleted}`),
   createCompute: (resourceId, userId, flavor) =>
     api.post('/resources/computes', { resource_id: resourceId, user_id: userId, flavor }),
   updateCompute: (resourceId, state, flavor) =>
     api.patch(`/resources/computes/${resourceId}`, { state, flavor }),
   deleteCompute: (resourceId) => api.delete(`/resources/computes/${resourceId}`),
 
-  getDisks: (userId) => api.get(`/resources/disks/user/${userId}`),
+  getDisks: (userId, includeDeleted = true) => 
+    api.get(`/resources/disks/user/${userId}?include_deleted=${includeDeleted}`),
   createDisk: (resourceId, userId, sizeGb, attachedTo = null) =>
     api.post('/resources/disks', { 
       resource_id: resourceId, 
@@ -42,7 +44,8 @@ export const resourceAPI = {
     api.patch(`/resources/disks/${resourceId}`, { state, size_gb: sizeGb, attached_to: attachedTo }),
   deleteDisk: (resourceId) => api.delete(`/resources/disks/${resourceId}`),
 
-  getFloatingIPs: (userId) => api.get(`/resources/floating-ips/user/${userId}`),
+  getFloatingIPs: (userId, includeReleased = true) => 
+    api.get(`/resources/floating-ips/user/${userId}?include_released=${includeReleased}`),
   createFloatingIP: (resourceId, userId, ipAddress, attachedTo = null) =>
     api.post('/resources/floating-ips', { 
       resource_id: resourceId, 

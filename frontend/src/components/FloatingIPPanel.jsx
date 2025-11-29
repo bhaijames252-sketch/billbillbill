@@ -94,11 +94,13 @@ function FloatingIPPanel({ userId, onAction }) {
         <div className="resource-list">
           {floatingIPs.length > 0 ? (
             floatingIPs.map((fip) => (
-              <div key={fip.resource_id} className={`resource-card ${fip.state}`}>
+              <div key={fip.resource_id} className={`resource-card ${fip.released_at ? 'released' : ''}`}>
                 <div className="resource-header">
                   <div>
                     <h3>{fip.resource_id}</h3>
-                    <span className={`status-badge ${fip.state}`}>{fip.state}</span>
+                    <span className={`status-badge ${fip.released_at ? 'released' : 'active'}`}>
+                      {fip.released_at ? 'released' : 'active'}
+                    </span>
                   </div>
                   <div className="resource-meta">
                     <div className="resource-ip">{fip.ip_address}</div>
@@ -113,6 +115,12 @@ function FloatingIPPanel({ userId, onAction }) {
                     <span className="label">Created:</span>
                     <span>{new Date(fip.created_at).toLocaleString()}</span>
                   </div>
+                  {fip.released_at && (
+                    <div className="info-item">
+                      <span className="label">Released:</span>
+                      <span>{new Date(fip.released_at).toLocaleString()}</span>
+                    </div>
+                  )}
                   {fip.attached_to && (
                     <div className="info-item">
                       <span className="label">Attached to:</span>
@@ -141,7 +149,7 @@ function FloatingIPPanel({ userId, onAction }) {
                 )}
 
                 <div className="resource-actions">
-                  {fip.state !== 'released' && (
+                  {!fip.released_at && (
                     <button className="btn-action btn-danger" onClick={() => handleDelete(fip.resource_id)}>
                       Release
                     </button>

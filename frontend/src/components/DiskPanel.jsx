@@ -100,7 +100,7 @@ function DiskPanel({ userId, onAction }) {
             />
             {prices?.disk && (
               <div className="price-hint">
-                Cost: ${(parseFloat(sizeGb) * prices.disk.per_gb_hour).toFixed(4)}/hour
+                Cost: ${parseFloat(sizeGb) * prices.disk.per_gb_hour}/hour
               </div>
             )}
           </div>
@@ -114,16 +114,18 @@ function DiskPanel({ userId, onAction }) {
         <div className="resource-list">
           {disks.length > 0 ? (
             disks.map((disk) => (
-              <div key={disk.resource_id} className={`resource-card ${disk.state}`}>
+              <div key={disk.resource_id} className={`resource-card ${disk.deleted_at ? 'deleted' : disk.state}`}>
                 <div className="resource-header">
                   <div>
                     <h3>{disk.resource_id}</h3>
-                    <span className={`status-badge ${disk.state}`}>{disk.state}</span>
+                    <span className={`status-badge ${disk.deleted_at ? 'deleted' : disk.state}`}>
+                      {disk.deleted_at ? 'deleted' : disk.state}
+                    </span>
                   </div>
                   <div className="resource-meta">
                     <div className="resource-size">{disk.size_gb} GB</div>
                     {prices?.disk && (
-                      <div className="resource-cost">${(disk.size_gb * prices.disk.per_gb_hour).toFixed(4)}/hr</div>
+                      <div className="resource-cost">${disk.size_gb * prices.disk.per_gb_hour}/hr</div>
                     )}
                   </div>
                 </div>
@@ -133,6 +135,12 @@ function DiskPanel({ userId, onAction }) {
                     <span className="label">Created:</span>
                     <span>{new Date(disk.created_at).toLocaleString()}</span>
                   </div>
+                  {disk.deleted_at && (
+                    <div className="info-item">
+                      <span className="label">Deleted:</span>
+                      <span>{new Date(disk.deleted_at).toLocaleString()}</span>
+                    </div>
+                  )}
                   {disk.attached_to && (
                     <div className="info-item">
                       <span className="label">Attached to:</span>
@@ -162,7 +170,7 @@ function DiskPanel({ userId, onAction }) {
                 )}
 
                 <div className="resource-actions">
-                  {(disk.state === 'attached' || disk.state === 'detached') && (
+                  {!disk.deleted_at && (disk.state === 'attached' || disk.state === 'detached') && (
                     <>
                       <button className="btn-action btn-info" onClick={() => handleResize(disk.resource_id, disk.size_gb)}>
                         Resize

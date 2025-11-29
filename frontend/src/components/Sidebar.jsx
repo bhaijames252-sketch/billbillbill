@@ -99,7 +99,7 @@ function Sidebar({ userId, refreshTrigger }) {
                     <div className="balance-card">
                       <h3>Current Balance</h3>
                       <div className="balance-amount">
-                        ${wallet.balance?.toFixed(2) || '0.00'}
+                        ${wallet.balance ?? '0'}
                       </div>
                       <div className="balance-currency">{wallet.currency}</div>
                     </div>
@@ -138,17 +138,20 @@ function Sidebar({ userId, refreshTrigger }) {
                 <h3>Transaction History</h3>
                 {transactions.length > 0 ? (
                   <div className="transactions-list">
-                    {transactions.map((tx, idx) => (
-                      <div key={idx} className={`transaction-item ${tx.type}`}>
+                    {transactions.slice().reverse().map((tx, idx) => (
+                      <div key={tx.tx_id || idx} className={`transaction-item ${tx.type}`}>
                         <div className="tx-header">
                           <span className="tx-type">{tx.type}</span>
                           <span className={`tx-amount ${tx.type}`}>
-                            {tx.type === 'credit' ? '+' : '-'}${Math.abs(tx.amount).toFixed(2)}
+                            {tx.type === 'credit' ? '+' : '-'}${Math.abs(tx.amount)}
                           </span>
                         </div>
                         <div className="tx-reason">{tx.reason}</div>
                         <div className="tx-date">
-                          {new Date(tx.timestamp).toLocaleString()}
+                          {tx.time ? new Date(tx.time).toLocaleString() : 'N/A'}
+                        </div>
+                        <div className="tx-balance">
+                          Balance: ${tx.balance_after ?? 'N/A'}
                         </div>
                       </div>
                     ))}
@@ -168,7 +171,7 @@ function Sidebar({ userId, refreshTrigger }) {
                       <div key={bill.id} className={`bill-item ${bill.status}`}>
                         <div className="bill-header">
                           <span className="bill-status">{bill.status}</span>
-                          <span className="bill-amount">${bill.total_amount?.toFixed(2)}</span>
+                          <span className="bill-amount">${bill.total_amount}</span>
                         </div>
                         <div className="bill-period">
                           Period: {new Date(bill.period_start).toLocaleDateString()} - {new Date(bill.period_end).toLocaleDateString()}
@@ -177,7 +180,7 @@ function Sidebar({ userId, refreshTrigger }) {
                           <div className="bill-items">
                             {bill.items.map((item, idx) => (
                               <div key={idx} className="bill-item-detail">
-                                {item.resource_type} - ${item.amount?.toFixed(2)}
+                                {item.resource_type} - ${item.amount}
                               </div>
                             ))}
                           </div>

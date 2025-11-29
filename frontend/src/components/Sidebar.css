@@ -165,6 +165,13 @@
   color: #999;
 }
 
+.tx-balance {
+  font-size: 11px;
+  color: #666;
+  margin-top: 4px;
+  font-weight: 500;
+}
+
 .bill-amount {
   font-weight: 700;
   font-size: 16px;

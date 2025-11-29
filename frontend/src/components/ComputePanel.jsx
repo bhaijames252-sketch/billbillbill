@@ -123,11 +123,13 @@ function ComputePanel({ userId, onAction }) {
         <div className="resource-list">
           {computes.length > 0 ? (
             computes.map((compute) => (
-              <div key={compute.resource_id} className={`resource-card ${compute.state}`}>
+              <div key={compute.resource_id} className={`resource-card ${compute.deleted_at ? 'deleted' : compute.state}`}>
                 <div className="resource-header">
                   <div>
                     <h3>{compute.resource_id}</h3>
-                    <span className={`status-badge ${compute.state}`}>{compute.state}</span>
+                    <span className={`status-badge ${compute.deleted_at ? 'deleted' : compute.state}`}>
+                      {compute.deleted_at ? 'deleted' : compute.state}
+                    </span>
                   </div>
                   <div className="resource-meta">
                     <div className="resource-flavor">{compute.flavor}</div>
@@ -142,6 +144,12 @@ function ComputePanel({ userId, onAction }) {
                     <span className="label">Created:</span>
                     <span>{new Date(compute.created_at).toLocaleString()}</span>
                   </div>
+                  {compute.deleted_at && (
+                    <div className="info-item">
+                      <span className="label">Deleted:</span>
+                      <span>{new Date(compute.deleted_at).toLocaleString()}</span>
+                    </div>
+                  )}
                   {compute.last_state_change && (
                     <div className="info-item">
                       <span className="label">Last Updated:</span>
@@ -170,19 +178,19 @@ function ComputePanel({ userId, onAction }) {
                 )}
 
                 <div className="resource-actions">
-                  {compute.state === 'running' && (
+                  {!compute.deleted_at && compute.state === 'running' && (
                     <button className="btn-action btn-warning" onClick={() => handleStateChange(compute.resource_id, 'stopped')}>
                       Stop
                     </button>
                   )}
-                  {compute.state === 'stopped' && (
+                  {!compute.deleted_at && compute.state === 'stopped' && (
                     <button className="btn-action btn-success" onClick={() => handleStateChange(compute.resource_id, 'running')}>
                       Start
                     </button>
                   )}
-                  {(compute.state === 'running' || compute.state === 'stopped') && (
+                  {!compute.deleted_at && (compute.state === 'running' || compute.state === 'stopped') && (
                     <>
-                      <button className="btn-action btn-info" onClick={() => handleResize(compute.resource_id, compute.flavor)}>
+                      <button className="btn-action btn-info" onClick={() => handleResize(compute.resource_id, compute.current_flavor)}>
                         Resize
                       </button>
                       <button className="btn-action btn-danger" onClick={() => handleDelete(compute.resource_id)}>
