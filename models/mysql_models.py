@@ -26,7 +26,6 @@ class UserWallet(Base):
     balance = Column(Numeric(precision=38, scale=18), nullable=False, default=0)
     currency = Column(String(10), nullable=False, default="USD")
     auto_recharge = Column(Boolean, nullable=False, default=False)
-    allow_negative = Column(Boolean, nullable=False, default=True)
     last_deducted_at = Column(DateTime, nullable=True)
     mongo_archival_id = Column(String(50), nullable=True)
     created_at = Column(DateTime, server_default=func.now())

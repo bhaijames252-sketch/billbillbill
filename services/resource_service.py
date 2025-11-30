@@ -112,8 +112,7 @@ class ResourceService:
             "resource_id": resource_id,
             "user_id": user_id,
             "size_gb": size_gb,
-            "state": "attached" if attached_to else "detached",
-            "attached_to": attached_to,
+            "state": "available",
             "created_at": now.isoformat() + "Z",
             "deleted_at": None,
             "last_billed_until": now.isoformat() + "Z",
@@ -160,21 +159,15 @@ class ResourceService:
         updates = {}
         event = {"event_id": self._generate_event_id("evt_d"), "time": now.isoformat() + "Z"}
 
-        if state:
-            updates["state"] = state
-            event["type"] = state
-            if state == "deleted":
-                updates["deleted_at"] = now.isoformat() + "Z"
+        if state == "deleted":
+            updates["state"] = "deleted"
+            updates["deleted_at"] = now.isoformat() + "Z"
+            event["type"] = "deleted"
 
-        if size_gb:
+        if size_gb and size_gb != resource.get("size_gb"):
             updates["size_gb"] = size_gb
             event["type"] = "resize"
             event["meta"] = {"size_gb": size_gb}
-
-        if attached_to is not None:
-            updates["attached_to"] = attached_to if attached_to else None
-            updates["state"] = "attached" if attached_to else "detached"
-            event["type"] = "attach" if attached_to else "detach"
 
         if updates:
             self.disk_col.update_one(
@@ -202,8 +195,7 @@ class ResourceService:
             "resource_id": resource_id,
             "user_id": user_id,
             "ip_address": ip_address,
-            "port_id": port_id,
-            "attached_to": attached_to,
+            "state": "allocated",
             "created_at": now.isoformat() + "Z",
             "released_at": None,
             "last_billed_until": now.isoformat() + "Z",
@@ -247,22 +239,24 @@ class ResourceService:
 
         now = datetime.utcnow()
         updates = {}
-        event = {"event_id": self._generate_event_id("evt_ip"), "time": now.isoformat() + "Z"}
+        event = None
 
         if release:
             updates["released_at"] = now.isoformat() + "Z"
-            event["type"] = "release"
-        else:
-            if port_id is not None:
-                updates["port_id"] = port_id
-            if attached_to is not None:
-                updates["attached_to"] = attached_to
-                event["type"] = "attach" if attached_to else "detach"
+            updates["state"] = "released"
+            event = {
+                "event_id": self._generate_event_id("evt_ip"),
+                "time": now.isoformat() + "Z",
+                "type": "release"
+            }
 
         if updates:
+            update_query = {"$set": updates}
+            if event:
+                update_query["$push"] = {"events": event}
             self.floating_ip_col.update_one(
                 {"resource_id": resource_id},
-                {"$set": updates, "$push": {"events": event}}
+                update_query
             )
 
         updated = self.floating_ip_col.find_one({"resource_id": resource_id})

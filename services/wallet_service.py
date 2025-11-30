@@ -25,13 +25,21 @@ class WalletService:
             return value
         return Decimal(str(value))
 
+    def _format_amount(self, value: Union[Decimal, str]) -> str:
+        if isinstance(value, str):
+            value = Decimal(value)
+        normalized = value.quantize(Decimal('0.000001')).normalize()
+        result = format(normalized, 'f')
+        if '.' in result:
+            result = result.rstrip('0').rstrip('.')
+        return result if result != '-0' else '0'
+
     def create_wallet(
         self,
         user_id: str,
         balance: Union[int, float, str, Decimal] = 0,
         currency: str = "USD",
-        auto_recharge: bool = False,
-        allow_negative: bool = True
+        auto_recharge: bool = False
     ) -> dict:
         mongo_archival_id = str(uuid.uuid4().hex[:12])
         balance_decimal = self._to_decimal(balance)
@@ -42,7 +50,6 @@ class WalletService:
             balance=balance_decimal,
             currency=currency,
             auto_recharge=auto_recharge,
-            allow_negative=allow_negative,
             mongo_archival_id=mongo_archival_id
         )
         self.mysql_session.add(wallet)
@@ -79,7 +86,6 @@ class WalletService:
         self,
         user_id: str,
         auto_recharge: Optional[bool] = None,
-        allow_negative: Optional[bool] = None,
         currency: Optional[str] = None
     ) -> Optional[dict]:
         wallet = self.mysql_session.query(UserWallet).filter(
@@ -91,8 +97,6 @@ class WalletService:
 
         if auto_recharge is not None:
             wallet.auto_recharge = auto_recharge
-        if allow_negative is not None:
-            wallet.allow_negative = allow_negative
         if currency is not None:
             wallet.currency = currency
 
@@ -127,8 +131,8 @@ class WalletService:
 
         return {
             "tx_id": tx["tx_id"],
-            "amount": str(amount_decimal),
-            "balance_after": str(balance_after),
+            "amount": self._format_amount(amount_decimal),
+            "balance_after": self._format_amount(balance_after),
             "type": "credit",
             "reason": reason
         }
@@ -150,9 +154,6 @@ class WalletService:
         amount_decimal = self._to_decimal(amount)
         current_balance = self._to_decimal(wallet.balance)
 
-        if not wallet.allow_negative and current_balance < amount_decimal:
-            return {"error": "Insufficient balance"}
-
         wallet.balance = current_balance - amount_decimal
         wallet.last_deducted_at = datetime.utcnow()
         balance_after = wallet.balance
@@ -169,8 +170,8 @@ class WalletService:
 
         return {
             "tx_id": tx["tx_id"],
-            "amount": str(-amount_decimal),
-            "balance_after": str(balance_after),
+            "amount": self._format_amount(-amount_decimal),
+            "balance_after": self._format_amount(balance_after),
             "type": "debit",
             "reason": reason,
             "price_version": price_version
@@ -205,8 +206,8 @@ class WalletService:
         tx = {
             "tx_id": self._generate_tx_id(),
             "time": datetime.utcnow().isoformat() + "Z",
-            "amount": str(amount),
-            "balance_after": str(balance_after),
+            "amount": self._format_amount(amount),
+            "balance_after": self._format_amount(balance_after),
             "type": tx_type,
             "reason": reason
         }
@@ -224,11 +225,10 @@ class WalletService:
     def _wallet_to_dict(self, wallet: UserWallet) -> dict:
         return {
             "user_id": wallet.user_id,
-            "balance": str(wallet.balance),
+            "balance": self._format_amount(wallet.balance),
             "currency": wallet.currency,
             "wallet": {
                 "auto_recharge": wallet.auto_recharge,
-                "allow_negative": wallet.allow_negative,
                 "last_deducted_at": wallet.last_deducted_at.isoformat() + "Z" if wallet.last_deducted_at else None
             },
             "mongo_archival_id": wallet.mongo_archival_id

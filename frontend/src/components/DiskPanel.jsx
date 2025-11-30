@@ -170,7 +170,7 @@ function DiskPanel({ userId, onAction }) {
                 )}
 
                 <div className="resource-actions">
-                  {!disk.deleted_at && (disk.state === 'attached' || disk.state === 'detached') && (
+                  {!disk.deleted_at && (disk.state === 'available' || disk.state === 'attached' || disk.state === 'detached') && (
                     <>
                       <button className="btn-action btn-info" onClick={() => handleResize(disk.resource_id, disk.size_gb)}>
                         Resize

@@ -24,7 +24,7 @@ function Sidebar({ userId, refreshTrigger }) {
         setWallet(walletRes.data)
       } catch (error) {
         if (error.response?.status === 404) {
-          await walletAPI.createWallet(userId, 1000.0)
+          await walletAPI.createWallet(userId, 0)
           const walletRes = await walletAPI.getWallet(userId)
           setWallet(walletRes.data)
         }

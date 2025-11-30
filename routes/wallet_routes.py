@@ -40,8 +40,7 @@ def create_wallet(
         user_id=request.user_id,
         balance=request.balance,
         currency=request.currency,
-        auto_recharge=request.auto_recharge,
-        allow_negative=request.allow_negative
+        auto_recharge=request.auto_recharge
     )
     return result
 
@@ -81,8 +80,7 @@ def get_balance(
             user_id=user_id,
             balance=0,
             currency="USD",
-            auto_recharge=False,
-            allow_negative=True
+            auto_recharge=False
         )
     return {
         "user_id": user_id,

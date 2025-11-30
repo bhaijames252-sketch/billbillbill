@@ -142,8 +142,7 @@ def create_disk(
     return service.create_disk(
         resource_id=request.resource_id,
         user_id=request.user_id,
-        size_gb=request.size_gb,
-        attached_to=request.attached_to
+        size_gb=request.size_gb
     )
 
 
@@ -184,7 +183,7 @@ def get_user_disks(
     "/disks/{resource_id}",
     response_model=dict,
     summary="Update disk resource",
-    description="Updates disk state, size, or attachment"
+    description="Updates disk state or size"
 )
 def update_disk(
     resource_id: str,
@@ -194,8 +193,7 @@ def update_disk(
     result = service.update_disk(
         resource_id=resource_id,
         state=request.state.value if request.state else None,
-        size_gb=request.size_gb,
-        attached_to=request.attached_to
+        size_gb=request.size_gb
     )
     if not result:
         raise HTTPException(
@@ -245,9 +243,7 @@ def create_floating_ip(
     return service.create_floating_ip(
         resource_id=request.resource_id,
         user_id=request.user_id,
-        ip_address=request.ip_address,
-        port_id=request.port_id,
-        attached_to=request.attached_to
+        ip_address=request.ip_address
     )
 
 
@@ -288,7 +284,7 @@ def get_user_floating_ips(
     "/floating-ips/{resource_id}",
     response_model=dict,
     summary="Update floating IP",
-    description="Updates floating IP attachment"
+    description="Updates floating IP (release only)"
 )
 def update_floating_ip(
     resource_id: str,
@@ -297,8 +293,7 @@ def update_floating_ip(
 ):
     result = service.update_floating_ip(
         resource_id=resource_id,
-        port_id=request.port_id,
-        attached_to=request.attached_to
+        release=request.release or False
     )
     if not result:
         raise HTTPException(

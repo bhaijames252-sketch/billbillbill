@@ -12,13 +12,12 @@ export const walletAPI = {
   getTransactions: (userId) => api.get(`/wallets/${userId}/transactions`),
   addCredit: (userId, amount, reason) => 
     api.post(`/wallets/${userId}/credit`, { amount, reason }),
-  createWallet: (userId, balance = 1000.0) =>
+  createWallet: (userId, balance = 0) =>
     api.post('/wallets/', {
       user_id: userId,
       balance,
       currency: 'USD',
       auto_recharge: false,
-      allow_negative: false,
     }),
 }
 

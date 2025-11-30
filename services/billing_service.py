@@ -26,6 +26,13 @@ class BillingService:
         now = datetime.utcnow()
         return f"bill_{now.strftime('%Y_%m_%d')}_{user_id}_{uuid.uuid4().hex[:6]}"
 
+    def _format_amount(self, value: Decimal) -> str:
+        normalized = value.quantize(Decimal('0.000001')).normalize()
+        result = format(normalized, 'f')
+        if '.' in result:
+            result = result.rstrip('0').rstrip('.')
+        return result if result != '-0' else '0'
+
     def _parse_datetime(self, dt_str) -> datetime:
         if isinstance(dt_str, datetime):
             if dt_str.tzinfo is not None:
@@ -91,18 +98,29 @@ class BillingService:
         segments = self._get_billable_segments(events, last_billed, period_end, "compute")
 
         current_flavor = None
-        current_state = "running"
+        current_state = None
 
-        for event in compute.get("events", []):
+        sorted_events = sorted(
+            compute.get("events", []),
+            key=lambda e: self._parse_datetime(e["time"])
+        )
+        for event in sorted_events:
             event_time = self._parse_datetime(event["time"])
             if event_time <= last_billed:
-                if event["type"] == "create" or event["type"] == "resize":
+                if event["type"] == "create":
                     current_flavor = event.get("meta", {}).get("flavor", current_flavor)
-                if event["type"] in ["running", "stopped", "deleted"]:
+                    current_state = "running"
+                elif event["type"] == "resize":
+                    current_flavor = event.get("meta", {}).get("flavor", current_flavor)
+                elif event["type"] in ["running", "stopped", "deleted"]:
                     current_state = event["type"]
+            else:
+                break
 
         if current_flavor is None:
             current_flavor = compute["current_flavor"]
+        if current_state is None:
+            current_state = compute.get("state", "running")
 
         if not segments:
             if current_state != "running":
@@ -127,7 +145,18 @@ class BillingService:
             elif segment["type"] in ["running", "stopped", "deleted"]:
                 current_state = segment["type"]
 
-        if current_state == "running" and current_flavor and current_time < period_end:
+        # Do not bill beyond a delete event. If the resource was deleted during the
+        # billing window, the delete event will be part of segments and we should
+        # not charge any time after it. Track deletion and only bill the tail
+        # period if the resource was not deleted.
+        is_deleted = False
+        # Re-evaluate segments to see if delete appears (segments are sorted)
+        for seg in segments:
+            if seg.get("type") == "deleted":
+                is_deleted = True
+                break
+
+        if current_state == "running" and current_flavor and (not is_deleted) and current_time < period_end:
             hours = self._calculate_hours(current_time, period_end)
             rate = pricing["compute"].get(current_flavor, pricing["compute"].get("others", {}))
             total_charge += hours * Decimal(str(rate.get("per_hour", 0)))
@@ -162,6 +191,7 @@ class BillingService:
         if current_size is None:
             current_size = disk["size_gb"]
 
+        is_deleted = False
         for segment in segments:
             hours = self._calculate_hours(current_time, segment["time"])
             total_charge += hours * Decimal(str(current_size)) * per_gb_hour
@@ -169,8 +199,10 @@ class BillingService:
             current_time = segment["time"]
             if segment["type"] == "resize":
                 current_size = segment["meta"].get("size_gb", current_size)
+            elif segment["type"] == "deleted":
+                is_deleted = True
 
-        if current_time < period_end:
+        if not is_deleted and current_time < period_end:
             hours = self._calculate_hours(current_time, period_end)
             total_charge += hours * Decimal(str(current_size)) * per_gb_hour
 
@@ -206,7 +238,7 @@ class BillingService:
                 charges.append({
                     "type": "compute",
                     "resource_id": compute["resource_id"],
-                    "amount": str(amount)
+                    "amount": self._format_amount(amount)
                 })
                 total += amount
 
@@ -233,7 +265,7 @@ class BillingService:
                 charges.append({
                     "type": "disk",
                     "resource_id": disk["resource_id"],
-                    "amount": str(amount)
+                    "amount": self._format_amount(amount)
                 })
                 total += amount
 
@@ -260,7 +292,7 @@ class BillingService:
                 charges.append({
                     "type": "floating_ip",
                     "resource_id": fip["resource_id"],
-                    "amount": str(amount)
+                    "amount": self._format_amount(amount)
                 })
                 total += amount
 
@@ -311,7 +343,7 @@ class BillingService:
             "period_end": period_end.isoformat() + "Z",
             "status": "pending",
             "charges": charges,
-            "total": str(total),
+            "total": self._format_amount(total),
             "paid": False,
             "price_version": pricing["price_version"],
             "generated_at": now.isoformat() + "Z"

@@ -64,7 +64,6 @@ class LatestPricesResponse(BaseModel):
 
 class WalletSettings(BaseModel):
     auto_recharge: bool = False
-    allow_negative: bool = True
     last_deducted_at: Optional[datetime] = None
 
 
@@ -73,12 +72,10 @@ class WalletCreateRequest(BaseModel):
     balance: Union[int, float, str] = 0
     currency: str = "USD"
     auto_recharge: bool = False
-    allow_negative: bool = True
 
 
 class WalletUpdateRequest(BaseModel):
     auto_recharge: Optional[bool] = None
-    allow_negative: Optional[bool] = None
     currency: Optional[str] = None
 
 
@@ -131,8 +128,7 @@ class ResourceState(str, Enum):
 
 
 class DiskState(str, Enum):
-    ATTACHED = "attached"
-    DETACHED = "detached"
+    AVAILABLE = "available"
     DELETED = "deleted"
 
 
@@ -162,13 +158,11 @@ class DiskCreateRequest(BaseModel):
     resource_id: str
     user_id: str
     size_gb: int
-    attached_to: Optional[str] = None
 
 
 class DiskUpdateRequest(BaseModel):
     state: Optional[DiskState] = None
     size_gb: Optional[int] = None
-    attached_to: Optional[str] = None
 
 
 class DiskResponse(BaseModel):
@@ -176,7 +170,6 @@ class DiskResponse(BaseModel):
     user_id: str
     size_gb: int
     state: str
-    attached_to: Optional[str] = None
     created_at: datetime
     deleted_at: Optional[datetime] = None
     last_billed_until: Optional[datetime] = None
@@ -187,21 +180,17 @@ class FloatingIPCreateRequest(BaseModel):
     resource_id: str
     user_id: str
     ip_address: str
-    port_id: Optional[str] = None
-    attached_to: Optional[str] = None
 
 
 class FloatingIPUpdateRequest(BaseModel):
-    port_id: Optional[str] = None
-    attached_to: Optional[str] = None
+    release: Optional[bool] = None
 
 
 class FloatingIPResponse(BaseModel):
     resource_id: str
     user_id: str
     ip_address: str
-    port_id: Optional[str] = None
-    attached_to: Optional[str] = None
+    state: str
     created_at: datetime
     released_at: Optional[datetime] = None
     last_billed_until: Optional[datetime] = None
